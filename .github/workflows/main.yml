@@ -1,0 +1,300 @@
+if(!require(pacman)) install.packages("pacman")
+
+pacman::p_load(rio, ## package for importing data easily
+               visdat, skimr, # data exploration
+               car, #fancy plots
+               httr,
+               ggplot2, #fancy plots
+               dplyr,
+               tidyr,
+               rmdHelpers,
+               kableExtra,
+               epiDisplay,
+               finalfit, # This is for making regression tables.
+               readxl,
+               ggdendro,
+               dendextend,
+               circlize,
+               tidyverse,
+               vcd,
+               stats,
+               forecast,
+               tseries,
+               lmtest,
+               PerformanceAnalytics,
+               corrplot,
+               performance)
+
+ds <- read_excel("D:/Saptorshi Gupta/GBD Study/GBD Study--HealtheX/Region for LWR.xlsx")
+View(ds)
+
+correlation <- cor(ds$ASPR, ds$SDI, method = "pearson")
+print(paste("Pearson Correlation: ", correlation))
+
+# Locally Weighted Regression (Lowess)
+lowess_fit <- loess(ASPR ~ SDI, data = ds, span = 0.2)
+ds$ASPR_fitted <- predict(lowess_fit, ds$SDI)
+
+# Plotting
+ggplot(ds, aes(x = SDI, y = ASPR, color = location)) +
+  geom_point(alpha = 0.6) +
+  geom_line(aes(y = ASPR_fitted), color = 'black', size = 1) +
+  theme_minimal() +
+  labs(title = "Relationship between scabies prevalence rate and SDI",
+       x = "Socio-Demographic Index (SDI)",
+       y = "Age-Standardized Prevalence Rate (ASPR)")+
+  theme(legend.title = element_text(size = 10), 
+        legend.text = element_text(size = 8)) +
+  scale_color_discrete(name = "Location")
+
+
+
+##Age-group and scabies incidence and prevalence
+age_data <-read_excel("D:/Saptorshi/Conferences/Healthex/GBD Study/Age-Group.xlsx",
+                      sheet = "2021_Prevalence")
+View(age_data)
+
+str(age_data)
+
+age_data$Age <- factor(age_data$Age,
+                       levels = c("<1 year", "2-4 years", "5-9 years", "10-14 years", "15-19 years",
+                                  "20-24 years", "25-29 years", "30-34 years", "35-39 years",
+                                  "40-44 years", "45-49 years", "50-54 years", "55-59 years",
+                                  "60-64 years", "65-69 years", "70-74 years", "75-79 years",
+                                  "80-84 years", "85-89 years", "90-94 years", "95+ years"))
+# Create the plot
+p <- ggplot(age_data, aes(x = Age, y=Case, fill=Gender)) +
+  geom_bar(stat = "identity",position = position_dodge(0.7), width = 0.6) +
+  geom_errorbar(aes(ymin = Lower_CI_case, ymax = Upper_CI_case),
+                position=position_dodge(0.7),width = 0.25) +
+  labs(title = "Gender differences in scabies prevalence by age-group",
+       x = "Age group",
+       fill = "Gender",
+       y="Number of Cases*1000") +
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1))
+
+print(p)
+
+p1 <- ggplot(age_data, aes(x = Age, y = Rate, color = Gender, group = Gender)) +
+  # Add a line graph for rates
+  geom_line(size = 1) +
+  
+  # Add a confidence interval band
+  geom_ribbon(aes(ymin = Lower_CI_rate, ymax = Upper_CI_rate, fill = Gender),
+              alpha = 0.2) +
+  labs(title = "Gender differences in scabies prevalence rate by age-group",
+       x = "Age Group",
+       y = "Prevalence Rate",
+       color = "Gender",
+       fill = "Gender") +
+  theme_minimal() +
+  
+  # Rotate x-axis labels for readability
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Print the plot
+print(p1)
+
+
+######Incidence
+age_data <-read_excel("D:/Saptorshi/Conferences/Healthex/GBD Study/Age-Group.xlsx",
+                      sheet = "2021_Incidence")
+View(age_data)
+
+str(age_data)
+
+age_data$Age <- factor(age_data$Age,
+                       levels = c("<1 year", "2-4 years", "5-9 years", "10-14 years", "15-19 years",
+                                  "20-24 years", "25-29 years", "30-34 years", "35-39 years",
+                                  "40-44 years", "45-49 years", "50-54 years", "55-59 years",
+                                  "60-64 years", "65-69 years", "70-74 years", "75-79 years",
+                                  "80-84 years", "85-89 years", "90-94 years", "95+ years"))
+
+# Create the plot
+p3 <- ggplot(age_data, aes(x = Age, y=Case, fill=Gender)) +
+  geom_bar(stat = "identity", position = position_dodge(0.7), width = 0.6) +
+  geom_errorbar(aes(ymin = Lower_CI_case, ymax = Upper_CI_case),
+                position=position_dodge(0.7),width = 0.25) +
+  labs(title = "Gender differences in scabies incidence by age-group",
+       x = "Age group",
+       fill = "Gender",
+       y="Number of Cases*1000") +
+  theme_minimal()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1))
+
+print(p3)
+
+p4 <- ggplot(age_data, aes(x = Age, y = Rate, color = Gender, group = Gender)) +
+  # Add a line graph for rates
+  geom_line(size = 1) +
+  
+  # Add a confidence interval band
+  geom_ribbon(aes(ymin = Lower_CI_rate, ymax = Upper_CI_rate, fill = Gender),
+              alpha = 0.2) +
+  labs(title = "Gender differences in scabies incidence rate by age-group",
+       x = "Age Group",
+       y = "Incidence Rate",
+       color = "Gender",
+       fill = "Gender") +
+  theme_minimal() +
+  
+  # Rotate x-axis labels for readability
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Print the plot
+print(p4)
+
+
+region_data <-read_excel("D:/Saptorshi/GBD Study/Data/Region_AAPC_SDI_WB_Health_System.xlsx",
+                         sheet = "World-Bank")
+View(region_data)
+
+# Create the forest plot
+region_data <- region_data %>%
+  arrange(Cohort, Gender)%>%
+  mutate(label = paste0(Cohort, " (", Gender, ")"))
+
+forest_plot <- ggplot(region_data, aes(x = factor(label, levels = unique(label)), 
+                                       y = AAPC, ymin = Lower_CI, ymax = Upper_CI)) +
+  geom_pointrange(aes(color = Significance), position = position_dodge(width = 1)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "Forest Plot of AAPC by Region and Gender",
+       x = "Region and Gender",
+       y = "AAPC (%)",
+       color = "Significance") +
+  theme(legend.position = "top")
+print(forest_plot)
+# Function to compute p-values for significance testing
+
+cor.mtest <- function(mat, ...) {
+  mat <- as.matrix(mat)
+  n <- ncol(mat)
+  p.mat<- matrix(NA, n, n)
+  diag(p.mat) <- 0
+  for (i in 1:(n - 1)) {
+    for (j in (i + 1):n) {
+      tmp <- cor.test(mat[, i], mat[, j], ...)
+      p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    }
+  }
+  colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
+  p.mat
+}
+# matrix of the p-value of the correlation
+p.mat <- cor.mtest(scabies)
+
+corrplot(cor_matrix, method="number",type = "upper",
+         order="hclust", p.mat = p.mat, sig.level = 0.01, insig = "blank")
+
+#Generating regression model
+model <- lm((ln_ASPR)~abs_lat+ln_Unemp+Urban+ln_density+LEB+ln_GNI,
+            data = scabies)
+summary(model)
+
+###VIF for multicollinearity
+###Interpretation: VIF values greater than 5 or 10 indicate multicollinearity issues
+vif_values <- vif(model)
+print(vif_values)
+
+####Model Performance
+r2(model)
+####Residual Diagnostics
+plot(model$fitted.values, residuals(model))
+abline(h=0, col="red")
+##QQPlot of Residuals
+qqnorm(residuals(model))
+qqline(residuals(model))
+##Histogram of residuals
+hist(residuals(model), main = "Histogram of Residuals", xlab = "Residuals")
+
+# Test for autocorrelation in residuals using Durbin-Watson test
+dw_test <- dwtest(model)
+print("Durbin-Watson Test for Autocorrelation:")
+print(dw_test)
+##SDI line trends
+SDI <-read_excel("D:/Saptorshi/GBD Study/Data/Incidence_Regions.xlsx",
+                 sheet = "Middle")
+View(SDI)
+
+ggplot(SDI, aes(x = Year, y = Value, group = Sex)) +
+  geom_line(aes(linetype = Sex, size = Sex), color="orange") +
+  scale_linetype_manual(values = c("Males" = "dotted", "Females" = "dotted", "Both" = "solid")) +
+  scale_size_manual(values = c("Males" = 1.0, "Females" = 0.6, "Both" = 1.5)) +
+  labs(title = "Middle",
+       x = "Year",
+       y = "Age-standardized incidence rate",
+       linetype = "Gender",
+       size = "Gender") +
+  theme_minimal()+
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())
+
+##Correlation
+scabies <- read_excel("D:/Saptorshi Gupta/GBD Study/GBD Study--HealtheX/Scabies_Data_2021.xlsx",
+                      sheet = "Covariates")
+View(scabies)
+
+# Generate the correlation matrix
+cor_matrix <- cor(scabies)
+print("Correlation Matrix:")
+print(cor_matrix)
+corrplot(cor_matrix, method="number",type = "upper",
+         order="hclust")
+# Function to compute p-values for significance testing
+
+cor.mtest <- function(mat, ...) {
+  mat <- as.matrix(mat)
+  n <- ncol(mat)
+  p.mat<- matrix(NA, n, n)
+  diag(p.mat) <- 0
+  for (i in 1:(n - 1)) {
+    for (j in (i + 1):n) {
+      tmp <- cor.test(mat[, i], mat[, j], ...)
+      p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    }
+  }
+  colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
+  p.mat
+}
+# matrix of the p-value of the correlation
+p.mat <- cor.mtest(scabies)
+
+corrplot(cor_matrix, method="number",type = "upper",
+         order="hclust", p.mat = p.mat, sig.level = 0.01, insig = "blank")
+
+#Generating regression model
+model <- lm((ln_ASPR)~abs_lat+ln_Unemp+Urban+ln_density+LEB+ln_GNI,
+            data = scabies)
+summary(model)
+
+###VIF for multicollinearity
+###Interpretation: VIF values greater than 5 or 10 indicate multicollinearity issues
+vif_values <- vif(model)
+print(vif_values)
+
+####Model Performance
+r2(model)
+####Residual Diagnostics
+plot(model$fitted.values, residuals(model))
+abline(h=0, col="red")
+##QQPlot of Residuals
+qqnorm(residuals(model))
+qqline(residuals(model))
+##Histogram of residuals
+hist(residuals(model), main = "Histogram of Residuals", xlab = "Residuals")
+
+# Test for autocorrelation in residuals using Durbin-Watson test
+dw_test <- dwtest(model)
+print("Durbin-Watson Test for Autocorrelation:")
+print(dw_test)
